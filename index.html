@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Mini Tavern - v3.0</title>
-  <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 <style>
 :root {
 --bg: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
@@ -39,7 +39,7 @@ header {
 padding: 10px 14px; background: var(--bg-card); border-bottom: 1px solid var(--border);
 display: flex; align-items: center; gap: 8px; z-index: 10; flex-shrink: 0;
 }
-header h1 { font-size: 1rem; flex: 1; }
+header h1 { font-size: 1rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header select {
 padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border);
 background: var(--bg-input); color: var(--text); font-size: 0.8rem;
@@ -188,12 +188,20 @@ padding: 10px 12px; margin-bottom: 10px; display: flex; gap: 8px; align-items: c
 /* 折叠 */
 .collapse-content { overflow: hidden; transition: max-height 0.3s; }
 .collapse-content.collapsed { max-height: 0 !important; }
+
+/* 导出聊天按钮 */
+#exportChatBtn {
+background: rgba(59, 130, 246, 0.2); color: var(--primary); border: 1px solid var(--primary);
+padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; cursor: pointer;
+margin-right: 8px; font-weight: bold;
+}
 </style>
 </head>
 <body>
 
 <header>
 <h1>🏕️ Mini Tavern <span class="version-tag">v3.0</span></h1>
+<button id="exportChatBtn" onclick="exportChatHistory()">⬇ 导出聊天</button>
 <span id="currentCharBadge" style="font-size:0.75rem; color:var(--text-sub);"></span>
 </header>
 
@@ -434,7 +442,8 @@ onkeydown="handleChatKeydown(event)" rows="1"></textarea>
 ✅ 世界书轮次计数持久化<br>
 ✅ 生成中切角色不串话<br>
 ✅ 自定义背景图（9:16 压缩存储）<br>
-✅ 中文输入法 Enter 不误发
+✅ 中文输入法 Enter 不误发<br>
+✅ 一键导出当前聊天记录
 </p>
 </div>
 </div>
@@ -867,6 +876,32 @@ renderCharInfoBar(); renderChat();
 });
 }
 
+// ===== 导出当前聊天记录 =====
+function exportChatHistory() {
+    if (!currentCharId) { alert('请先选择角色'); return; }
+    const char = getChar(currentCharId);
+    const msgs = chatHistory[currentCharId];
+    
+    if (!msgs || msgs.length === 0) {
+        alert('当前没有聊天记录哦'); return;
+    }
+
+    let content = `角色：${char ? char.name : '未知'}\n导出时间：${new Date().toLocaleString()}\n\n`;
+    msgs.forEach(m => {
+        const roleName = m.role === 'user' ? '我' : (char ? char.name : 'AI');
+        content += `[${roleName}]:\n${m.content}\n\n`;
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = (char ? char.name : '聊天记录').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = `${safeName}_${new Date().getTime()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 // ===== 世界书 =====
 function renderWBList(){
 const kw=(document.getElementById('wbSearch').value||'').toLowerCase();
@@ -1159,7 +1194,7 @@ localStorage.removeItem(`mt_wb_turn_${currentCharId}`);
 renderChat();
 }
 
-// ✅ 修复：中文/日文等 IME 组合输入中按 Enter 是在选词，不能触发发送
+// 修复：中文/日文等 IME 组合输入中按 Enter 是在选词，不能触发发送
 function handleChatKeydown(e){
 if(e.isComposing || e.keyCode === 229) return;
 if(e.key==='Enter' && !e.shiftKey){
@@ -1169,9 +1204,10 @@ sendMessage();
 }
 
 function downloadJSON(data,filename){
+const safe = (filename||'export.json').replace(/[\\/:*?"<>|]/g, '_');
 const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
 const url=URL.createObjectURL(blob); const a=document.createElement('a');
-a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+a.href=url;a.download=safe;a.click();URL.revokeObjectURL(url);
 }
 </script>
 </body>
