@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mini Tavern - v3.0</title>
+<style>
+:root {
+--bg: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
+--text: #f8fafc; --text-sub: #94a3b8; --primary: #3b82f6;
+--primary-hover: #2563eb; --danger: #ef4444; --success: #10b981;
+--warning: #f59e0b; --border: #334155; --radius: 12px;
+--bg-image: none; --bg-opacity: 0; --bg-blur: 0px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+background: var(--bg); color: var(--text);
+height: 100vh; height: 100dvh;
+display: flex; flex-direction: column; overflow: hidden;
+}
+/* 背景图层 */
+body::before {
+content: '';
+position: fixed;
+inset: -30px;
+z-index: -1;
+background-image: var(--bg-image);
+background-position: center;
+background-size: cover;
+background-repeat: no-repeat;
+opacity: var(--bg-opacity);
+filter: blur(var(--bg-blur));
+pointer-events: none;
+transition: opacity .25s, filter .25s;
+}
+header {
+padding: 10px 14px; background: var(--bg-card); border-bottom: 1px solid var(--border);
+display: flex; align-items: center; gap: 8px; z-index: 10; flex-shrink: 0;
+}
+header h1 { font-size: 1rem; flex: 1; }
+header select {
+padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border);
+background: var(--bg-input); color: var(--text); font-size: 0.8rem;
+}
+.tab-bar { display: flex; background: var(--bg-card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tab-btn {
+flex: 1; padding: 9px; text-align: center; font-size: 0.8rem;
+color: var(--text-sub); cursor: pointer; border-bottom: 2px solid transparent;
+background: none; border-top: none; border-left: none; border-right: none;
+}
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+.panel { flex: 1; overflow-y: auto; display: none; padding: 14px; }
+.panel.active { display: block; }
+
+.input-group { margin-bottom: 12px; }
+.input-group label { display: block; margin-bottom: 3px; color: var(--text-sub); font-size: 0.8rem; font-weight: 500; }
+input[type="text"], input[type="password"], textarea, select {
+width: 100%; padding: 9px 11px; border-radius: var(--radius);
+border: 1px solid var(--border); background: var(--bg-input); color: var(--text);
+font-size: 0.9rem; outline: none;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+textarea { resize: vertical; }
+/* 滑杆样式 */
+input[type="range"] {
+width: 100%; height: 28px; background: transparent; -webkit-appearance: none; appearance: none; outline: none;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+height: 6px; background: var(--bg-input); border-radius: 3px;
+}
+input[type="range"]::-webkit-slider-thumb {
+-webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+background: var(--primary); border-radius: 50%; margin-top: -6px;
+}
+input[type="range"]::-moz-range-track {
+height: 6px; background: var(--bg-input); border-radius: 3px;
+}
+input[type="range"]::-moz-range-thumb {
+width: 18px; height: 18px; background: var(--primary); border: none; border-radius: 50%;
+}
+.btn {
+padding: 8px 16px; border-radius: var(--radius); border: none;
+font-weight: 600; cursor: pointer; font-size: 0.85rem;
+display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-secondary { background: var(--bg-input); color: var(--text); border: 1px solid var(--border); }
+.btn-success { background: var(--success); color: white; }
+.btn-warning { background: var(--warning); color: white; }
+.btn-small { padding: 5px 10px; font-size: 0.75rem; }
+.btn-full { width: 100%; margin-top: 6px; }
+#connStatus { margin-top: 8px; font-size: 0.8rem; min-height: 18px; }
+
+/* 角色卡 */
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.char-card {
+background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+padding: 12px; cursor: pointer; transition: border-color 0.2s; position: relative;
+}
+.char-card:hover { border-color: var(--primary); }
+.char-card.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.char-card .avatar { font-size: 1.8rem; text-align: center; margin-bottom: 6px; }
+.char-card .name { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; text-align: center; }
+.char-card .desc { font-size: 0.7rem; color: var(--text-sub); text-align: center;
+display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.char-card .badge-active { position: absolute; top: 5px; right: 5px; font-size: 0.55rem; padding: 2px 5px; background: var(--primary); color: white; border-radius: 6px; }
+.char-card .badge-pin { position: absolute; top: 5px; left: 5px; font-size: 0.65rem; }
+.char-actions { display: flex; gap: 3px; margin-top: 6px; }
+.char-actions .btn { flex: 1; }
+.char-card-new {
+display: flex; align-items: center; justify-content: center;
+border: 2px dashed var(--border); background: transparent;
+color: var(--text-sub); font-size: 0.85rem; min-height: 110px;
+}
+.char-card-new:hover { border-color: var(--primary); color: var(--primary); }
+.search-row { display: flex; gap: 6px; margin-bottom: 12px; }
+.search-row input { flex: 1; }
+
+/* 编辑器 */
+.editor-head { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.editor-body { flex: 1; overflow-y: auto; }
+.field-hint { font-size: 0.7rem; color: var(--text-sub); margin-top: 2px; margin-bottom: 8px; }
+.preview-box {
+background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+padding: 10px; margin-top: 8px; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; max-height: 200px; overflow-y: auto;
+}
+.preview-box .label { font-size: 0.7rem; color: var(--text-sub); margin-bottom: 4px; }
+
+/* 世界书 */
+.wb-entry {
+background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+padding: 12px; margin-bottom: 10px;
+}
+.wb-entry .wb-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.wb-entry .wb-head .wb-title { font-weight: 600; font-size: 0.9rem; flex: 1; }
+.wb-entry .wb-head .wb-mode {
+font-size: 0.65rem; padding: 2px 7px; border-radius: 6px; font-weight: 600;
+}
+.wb-mode-always { background: var(--warning); color: #000; }
+.wb-mode-keyword { background: var(--primary); color: white; }
+.wb-mode-turn { background: var(--success); color: white; }
+.wb-entry .wb-keys { font-size: 0.7rem; color: var(--text-sub); margin-bottom: 6px; }
+.wb-entry .wb-content {
+font-size: 0.8rem; color: var(--text); line-height: 1.4;
+display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wb-entry .wb-actions { display: flex; gap: 4px; margin-top: 8px; }
+.wb-inject-info {
+font-size: 0.7rem; color: var(--success); padding: 6px 10px;
+background: rgba(16,185,129,0.1); border-radius: 8px; margin-bottom: 8px;
+}
+
+/* 聊天 */
+.chat-container { display: flex; flex-direction: column; height: 100%; }
+.chat-messages { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+.msg {
+max-width: 85%; padding: 9px 12px; border-radius: var(--radius);
+margin-bottom: 8px; line-height: 1.5; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word;
+}
+.msg-user { align-self: flex-end; background: var(--primary); color: white; }
+.msg-bot { align-self: flex-start; background: var(--bg-card); border: 1px solid var(--border); }
+.chat-input-row {
+display: flex; gap: 6px; align-items: flex-end; padding-top: 8px;
+border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.chat-input-row textarea { flex: 1; min-height: 40px; max-height: 100px; resize: none; }
+.chat-actions { display: flex; gap: 4px; }
+.char-info {
+background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+padding: 10px 12px; margin-bottom: 10px; display: flex; gap: 8px; align-items: center;
+}
+.char-info .avatar { font-size: 1.5rem; }
+.char-info .meta { flex: 1; }
+.char-info .meta h3 { font-size: 0.9rem; }
+.char-info .meta p { font-size: 0.7rem; color: var(--text-sub); }
+
+.typing::after { content: '▋'; animation: blink 0.8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.version-tag { font-size: 0.65rem; color: var(--text-sub); margin-left: auto; }
+
+/* 折叠 */
+.collapse-content { overflow: hidden; transition: max-height 0.3s; }
+.collapse-content.collapsed { max-height: 0 !important; }
+</style>
+</head>
+<body>
+
+<header>
+<h1>🏕️ Mini Tavern <span class="version-tag">v3.0</span></h1>
+<span id="currentCharBadge" style="font-size:0.75rem; color:var(--text-sub);"></span>
+</header>
+
+<div class="tab-bar">
+<button class="tab-btn active" onclick="switchTab('chat', this)">💬 聊天</button>
+<button class="tab-btn" onclick="switchTab('chars', this)">🎭 角色</button>
+<button class="tab-btn" onclick="switchTab('worldbook', this)">📖 世界书</button>
+<button class="tab-btn" onclick="switchTab('config', this)">⚙️ 配置</button>
+</div>
+
+<!-- 聊天面板 -->
+<div id="chatPanel" class="panel active">
+<div class="chat-container">
+<div id="charInfoBar"></div>
+<div id="injectInfo" class="wb-inject-info" style="display:none;"></div>
+<div class="chat-messages" id="chatMessages"></div>
+<div class="chat-input-row">
+<textarea id="chatInput" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+onkeydown="handleChatKeydown(event)" rows="1"></textarea>
+<div class="chat-actions">
+<button class="btn btn-secondary btn-small" onclick="clearChat()">清空</button>
+<button class="btn btn-danger btn-small" id="stopBtn" onclick="stopGenerate()" style="display:none;">停止</button>
+<button class="btn btn-primary btn-small" id="sendBtn" onclick="sendMessage()">发送</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 角色管理面板 -->
+<div id="charsPanel" class="panel">
+<div id="charListView">
+<div class="search-row">
+<input type="text" id="charSearch" placeholder="🔍 搜索角色..." oninput="renderCharGrid()">
+<button class="btn btn-primary btn-small" onclick="importCharFiles()">📥 导入</button>
+<button class="btn btn-secondary btn-small" onclick="exportAllChars()">⬇ 全部导出</button>
+</div>
+<div class="char-grid" id="charGrid"></div>
+</div>
+<div id="charEditView" style="display:none;">
+<div class="editor-head">
+<button class="btn btn-secondary btn-small" onclick="closeCharEditor()">← 返回</button>
+<button class="btn btn-success btn-small" onclick="saveCurrentChar()">💾 保存</button>
+<button class="btn btn-secondary btn-small" onclick="exportCurrentChar()">⬇ 导出</button>
+<button class="btn btn-danger btn-small" onclick="deleteCurrentChar()">🗑</button>
+</div>
+<div class="editor-body">
+<div class="input-group">
+<label>头像（emoji）</label>
+<input type="text" id="editAvatar" placeholder="😎" maxlength="4" style="font-size:1.3rem; text-align:center;">
+</div>
+<div class="input-group">
+<label>角色名称</label>
+<input type="text" id="editName" placeholder="角色名">
+</div>
+<div class="input-group">
+<label>描述</label>
+<input type="text" id="editDesc" placeholder="一句话概括">
+</div>
+<div class="input-group">
+<label>设定（Persona）</label>
+<textarea id="editPersona" rows="5" placeholder="性格、背景、说话风格..."></textarea>
+<p class="field-hint">💡 角色核心人设，会拼进 system prompt</p>
+</div>
+<div class="input-group">
+<label>示例对话</label>
+<textarea id="editExamples" rows="4" placeholder="用户: 你好&#10;角色: 你好呀！"></textarea>
+<p class="field-hint">💡 格式：用户/角色交替，帮助 AI 学习说话方式</p>
+</div>
+<div class="input-group">
+<label>开场白</label>
+<textarea id="editFirstMsg" rows="2" placeholder="角色第一句话"></textarea>
+</div>
+<hr style="border:1px solid var(--border); margin: 14px 0;">
+<div class="input-group">
+<label>🔧 系统提示词（System Prompt）</label>
+<textarea id="editSysPrompt" rows="4" placeholder="覆盖全局 system 指令。留空则使用默认角色设定。&#10;例：你是作者的笔，只输出小说正文，不聊闲天。"></textarea>
+<p class="field-hint">💡 优先级最高，直接覆盖默认 system。适合写文风锁、输出规则</p>
+</div>
+<div class="input-group">
+<label>🔧 后置约束（Post-History / 破限 / 文风锁）</label>
+<textarea id="editPostHist" rows="3" placeholder="放在对话历史之后，近端强约束。&#10;例：保持冷峻画面感，禁止解说设定，禁止OOC。"></textarea>
+<p class="field-hint">💡 注入在聊天记录末尾、用户输入之前，防止 AI 跑偏</p>
+</div>
+<div class="input-group">
+<label>📋 预览完整 Prompt 组装</label>
+<div class="preview-box">
+<div class="label">实际发送顺序：</div>
+<div id="promptPreview">—</div>
+</div>
+</div>
+</div>
+</div>
+<input type="file" id="importFileInput" accept=".json" multiple style="display:none;" onchange="handleCharImport(event)">
+</div>
+
+<!-- 世界书面板 -->
+<div id="worldbookPanel" class="panel">
+<div id="wbListView">
+<div class="search-row">
+<input type="text" id="wbSearch" placeholder="🔍 搜索条目..." oninput="renderWBList()">
+<button class="btn btn-primary btn-small" onclick="openWBEditor(null)">+ 新建条目</button>
+<button class="btn btn-secondary btn-small" onclick="exportWB()">⬇ 导出</button>
+<button class="btn btn-secondary btn-small" onclick="importWBFile()">📥 导入</button>
+</div>
+<div id="wbBudget" style="font-size:0.7rem; color:var(--text-sub); margin-bottom:10px;"></div>
+<div id="wbList"></div>
+</div>
+<div id="wbEditView" style="display:none;">
+<div class="editor-head">
+<button class="btn btn-secondary btn-small" onclick="closeWBEditor()">← 返回</button>
+<button class="btn btn-success btn-small" onclick="saveWBEntry()">💾 保存</button>
+<button class="btn btn-danger btn-small" onclick="deleteWBEntry()">🗑</button>
+</div>
+<div class="editor-body">
+<div class="input-group">
+<label>条目名称</label>
+<input type="text" id="wbEditName" placeholder="如：陨星渊设定">
+</div>
+<div class="input-group">
+<label>触发模式</label>
+<select id="wbEditMode" onchange="onWBModeChange()">
+<option value="always">📌 常驻（每次都注入）</option>
+<option value="keyword">🎯 关键词命中</option>
+<option value="turn">🔄 每 N 轮注入</option>
+</select>
+</div>
+<div class="input-group" id="wbKeyGroup">
+<label>触发关键词（逗号分隔）</label>
+<input type="text" id="wbEditKeys" placeholder="陨星渊, 渊底, 骨刺">
+<p class="field-hint">💡 对话内容中出现这些词时注入此条目</p>
+</div>
+<div class="input-group" id="wbTurnGroup" style="display:none;">
+<label>每 N 轮注入一次</label>
+<input type="number" id="wbEditTurn" value="5" min="1" max="50">
+</div>
+<div class="input-group">
+<label>注入位置</label>
+<select id="wbEditPosition">
+<option value="0">System 层（角色设定之后）</option>
+<option value="1">历史末尾（用户输入之前）</option>
+</select>
+</div>
+<div class="input-group">
+<label>排序权重（数字小=先注入）</label>
+<input type="number" id="wbEditOrder" value="100" min="0" max="9999">
+</div>
+<div class="input-group">
+<label>内容</label>
+<textarea id="wbEditContent" rows="8" placeholder="条目内容，支持多行。注入时直接拼入 prompt。"></textarea>
+<p class="field-hint">💡 建议单条不超过 500 字，避免浪费 token</p>
+</div>
+<div class="input-group">
+<label><input type="checkbox" id="wbEditDisabled"> 禁用此条目</label>
+</div>
+</div>
+</div>
+<input type="file" id="wbImportInput" accept=".json" style="display:none;" onchange="handleWBImport(event)">
+</div>
+
+<!-- 配置面板 -->
+<div id="configPanel" class="panel">
+<div class="input-group">
+<label>服务商预设</label>
+<select id="cfgProvider" onchange="onProviderChange()">
+<option value="custom">自定义</option>
+<option value="deepseek">DeepSeek</option>
+<option value="openai">OpenAI</option>
+<option value="openrouter">OpenRouter</option>
+<option value="zhipu">智谱 GLM</option>
+<option value="moonshot">月之暗面</option>
+<option value="qwen">阿里百炼</option>
+</select>
+</div>
+<div class="input-group">
+<label>API Base URL</label>
+<input type="text" id="cfgBaseUrl" placeholder="https://api.deepseek.com/v1">
+</div>
+<div class="input-group">
+<label>API Key</label>
+<input type="password" id="cfgApiKey" placeholder="sk-...">
+</div>
+<div class="input-group">
+<label>模型名称</label>
+<input type="text" id="cfgModel" placeholder="deepseek-chat">
+</div>
+<div class="input-group">
+<label>Temperature</label>
+<input type="number" id="cfgTemp" value="0.8" min="0" max="2" step="0.1">
+</div>
+<div class="input-group">
+<label>Max Tokens</label>
+<input type="number" id="cfgMaxTokens" value="2048" min="100" max="8192" step="100">
+</div>
+<div class="input-group">
+<label>世界书注入预算（字符数）</label>
+<input type="number" id="cfgWbBudet" value="1500" min="200" max="5000" step="100">
+<p class="field-hint">💡 所有世界书条目注入内容的总字数上限，超出按排序截断</p>
+</div>
+<button class="btn btn-primary btn-full" onclick="saveConfig()">💾 保存配置</button>
+<button class="btn btn-secondary btn-full" onclick="testConnection()">🔌 测试连接</button>
+<div id="connStatus"></div>
+
+<hr style="border:1px solid var(--border); margin: 16px 0;">
+
+<!-- 背景图片区块 -->
+<div class="input-group">
+<label>🖼 背景图片（推荐 9:16 竖图）</label>
+<div style="display:flex; gap:6px;">
+<button class="btn btn-secondary btn-small" onclick="pickBgImage()" style="flex:1;">📷 选择图片</button>
+<button class="btn btn-danger btn-small" onclick="resetBgImage()" style="flex:1;">恢复默认</button>
+</div>
+<p class="field-hint">💡 自动压缩到 1080×1920 以内，只存在本机</p>
+<div id="bgPreview" style="display:none; margin-top:8px;">
+<img id="bgPreviewImg" alt="背景预览" style="width:100%; border-radius:12px; max-height:220px; object-fit:cover; display:block;">
+<p class="field-hint" id="bgSizeInfo"></p>
+</div>
+</div>
+<div class="input-group">
+<label>背景显示强度 <span id="bgOpacityVal" style="color:var(--primary);">60%</span></label>
+<input type="range" id="cfgBgOpacity" min="0" max="100" value="60" oninput="onBgOpacityChange()">
+<p class="field-hint">0% = 不显示背景，100% = 原图全亮</p>
+</div>
+<div class="input-group">
+<label>背景模糊 <span id="bgBlurVal" style="color:var(--primary);">0px</span></label>
+<input type="range" id="cfgBgBlur" min="0" max="12" value="0" oninput="onBgBlurChange()">
+<p class="field-hint">💡 手机上模糊值过大会影响滚动流畅度</p>
+</div>
+<input type="file" id="bgFileInput" accept="image/*" style="display:none;" onchange="handleBgImage(event)">
+
+<div style="margin-top:16px; padding:10px; background:var(--bg-card); border-radius:var(--radius); border:1px solid var(--border);">
+<p style="font-size:0.75rem; color:var(--text-sub); line-height:1.5;">
+📌 <strong style="color:var(--text);">v3.0 完整版</strong><br>
+✅ 角色卡 + 系统提示词 + 后置约束<br>
+✅ 世界书：常驻/关键词/轮次 三种模式<br>
+✅ 注入透明显示 + 预算控制<br>
+✅ V3 角色卡 JSON 导入导出<br>
+✅ 世界书标准格式导入导出<br>
+✅ 世界书轮次计数持久化<br>
+✅ 生成中切角色不串话<br>
+✅ 自定义背景图（9:16 压缩存储）<br>
+✅ 中文输入法 Enter 不误发
+</p>
+</div>
+</div>
+
+<script>
+// ===== 服务商 =====
+const PROVIDERS = {
+custom: { base:'', model:'' },
+deepseek: { base:'https://api.deepseek.com/v1', model:'deepseek-chat' },
+openai: { base:'https://api.openai.com/v1', model:'gpt-4o-mini' },
+openrouter: { base:'https://openrouter.ai/api/v1', model:'anthropic/claude-3.5-haiku' },
+zhipu: { base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4-flash' },
+moonshot: { base:'https://api.moonshot.cn/v1', model:'moonshot-v1-8k' },
+qwen: { base:'https://dashscope.aliyuncs.com/compatible-mode/v1', model:'qwen-plus' }
+};
+function onProviderChange() {
+const p = document.getElementById('cfgProvider').value;
+if (p==='custom') return;
+const i = PROVIDERS[p];
+if(i.base) document.getElementById('cfgBaseUrl').value = i.base;
+if(i.model) document.getElementById('cfgModel').value = i.model;
+}
+
+// ===== 数据存储 =====
+let characters = [];
+let currentCharId = null;
+let chatHistory = {};
+let worldbook = [];
+let wbTurnCounter = {};
+let editingCharId = null, isNewChar = false;
+let editingWBId = null, isNewWB = false;
+let abortController = null, isGenerating = false;
+
+const DEFAULT_CHARS = [{
+id:'def_demo', avatar:'👋', name:'示例角色', desc:'默认测试角色',
+persona:'你是一个友善的AI助手，性格开朗幽默。', examples:'用户: 你好\n角色: 你好呀！👋',
+first_msg:'你好！有什么想聊的？', sys_prompt:'', post_hist:'', pinned:false, builtin:true
+},{
+id:'def_cyber', avatar:'🌆', name:'赛博朋克助手', desc:'2187年街头AI',
+persona:'你生活在2187年赛博朋克城市。说话简洁冷幽默，提到义体/黑客/霓虹灯。从不说"作为一个AI"。',
+examples:'用户: 最近有什么新闻\n角色: 霓虹区的黑市芯片又涨价了。想搞一块？',
+first_msg:'...霓虹灯又闪了。你找我有什么事，黑客？', sys_prompt:'', post_hist:'', pinned:false, builtin:true
+}];
+
+function uid(){ return 'id_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(t){ const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+
+// ===== 确保聊天历史初始化 =====
+function ensureChat(charId){
+if(!charId) return;
+if(chatHistory[charId]) return;
+const saved = localStorage.getItem(`mt_chat_${charId}`);
+if(saved){ try{ chatHistory[charId]=JSON.parse(saved); return; }catch(e){} }
+chatHistory[charId] = [];
+const c = getChar(charId);
+if(c && c.first_msg) chatHistory[charId].push({role:'assistant',content:c.first_msg});
+}
+
+// ===== 初始化 =====
+document.addEventListener('DOMContentLoaded', ()=>{
+characters = loadChars();
+const saved = localStorage.getItem('mt_current_char');
+currentCharId = (saved && getChar(saved)) ? saved : characters[0]?.id;
+worldbook = loadWB();
+loadConfig();
+characters.forEach(c=>ensureChat(c.id));
+ensureChat(currentCharId);
+characters.forEach(c => {
+const t = parseInt(localStorage.getItem(`mt_wb_turn_${c.id}`) || '0', 10) || 0;
+if (t > 0) wbTurnCounter[c.id] = t;
+});
+renderCharGrid();
+renderWBList();
+renderCharInfoBar();
+renderChat();
+updateInjectInfo();
+applyBg();
+refreshBgPreview();
+});
+
+function loadChars(){
+try{ const r=JSON.parse(localStorage.getItem('mt_characters')||'[]');
+if(!Array.isArray(r)||r.length===0) return JSON.parse(JSON.stringify(DEFAULT_CHARS));
+return r; }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_CHARS)); }
+}
+function saveChars(){ localStorage.setItem('mt_characters', JSON.stringify(characters)); }
+function getChar(id){ return characters.find(c=>c.id===id); }
+
+function loadWB(){
+try{ const r=JSON.parse(localStorage.getItem('mt_worldbook')||'[]');
+if(!Array.isArray(r)) return []; return r; }catch(e){ return []; }
+}
+function saveWB(){ localStorage.setItem('mt_worldbook', JSON.stringify(worldbook)); }
+
+// ===== 配置 =====
+function loadConfig(){
+document.getElementById('cfgApiKey').value = localStorage.getItem('mt_api_key')||'';
+document.getElementById('cfgBaseUrl').value = localStorage.getItem('mt_base_url')||'https://api.deepseek.com/v1';
+document.getElementById('cfgModel').value = localStorage.getItem('mt_model')||'deepseek-chat';
+document.getElementById('cfgTemp').value = localStorage.getItem('mt_temp')||'0.8';
+document.getElementById('cfgMaxTokens').value = localStorage.getItem('mt_max_tokens')||'2048';
+document.getElementById('cfgWbBudet').value = localStorage.getItem('mt_wb_budget')||'1500';
+const b=document.getElementById('cfgBaseUrl').value, m=document.getElementById('cfgModel').value;
+const mt=Object.entries(PROVIDERS).find(([k,v])=>v.base===b&&v.model===m);
+document.getElementById('cfgProvider').value = mt?mt[0]:'custom';
+}
+function saveConfig(){
+localStorage.setItem('mt_api_key', document.getElementById('cfgApiKey').value.trim());
+localStorage.setItem('mt_base_url', document.getElementById('cfgBaseUrl').value.trim().replace(/\/+$/,''));
+localStorage.setItem('mt_model', document.getElementById('cfgModel').value.trim());
+localStorage.setItem('mt_temp', document.getElementById('cfgTemp').value);
+localStorage.setItem('mt_max_tokens', document.getElementById('cfgMaxTokens').value);
+localStorage.setItem('mt_wb_budget', document.getElementById('cfgWbBudet').value);
+document.getElementById('connStatus').textContent='✅ 配置已保存';
+document.getElementById('connStatus').style.color='var(--success)';
+renderWBList();
+}
+async function testConnection(){
+const key=document.getElementById('cfgApiKey').value.trim();
+const base=document.getElementById('cfgBaseUrl').value.trim().replace(/\/+$/,'');
+const st=document.getElementById('connStatus');
+if(!key){st.textContent='❌ 请先输入Key';st.style.color='var(--danger)';return;}
+if(!base){st.textContent='❌ 请先输入 Base URL';st.style.color='var(--danger)';return;}
+st.textContent='⏳ 测试中...';st.style.color='var(--text-sub)';
+try{ const r=await fetch(`${base}/models`,{headers:{'Authorization':`Bearer ${key}`}});
+if(r.ok){st.textContent='✅ 连接成功！';st.style.color='var(--success)';}
+else{st.textContent=`❌ ${r.status}`;st.style.color='var(--danger)';}
+}catch(e){st.textContent=`❌ ${e.message}`;st.style.color='var(--danger)';}
+}
+
+// ===== 背景图片 =====
+function pickBgImage(){ document.getElementById('bgFileInput').click(); }
+
+function applyBg(){
+const img = localStorage.getItem('mt_bg_image') || '';
+const op = parseInt(localStorage.getItem('mt_bg_opacity') || '60', 10);
+const bl = parseInt(localStorage.getItem('mt_bg_blur') || '0', 10);
+const root = document.documentElement.style;
+root.setProperty('--bg-image', img ? `url("${img}")` : 'none');
+root.setProperty('--bg-opacity', img ? String(op/100) : '0');
+root.setProperty('--bg-blur', bl + 'px');
+}
+
+function refreshBgPreview(){
+const img = localStorage.getItem('mt_bg_image');
+const box = document.getElementById('bgPreview');
+const el = document.getElementById('bgPreviewImg');
+const info = document.getElementById('bgSizeInfo');
+if(img){
+box.style.display='block';
+el.src = img;
+const kb = Math.round(img.length * 0.75 / 1024);
+info.textContent = `已设置 · 约 ${kb} KB（仅本机保存）`;
+}else{
+box.style.display='none';
+el.removeAttribute('src');
+info.textContent='';
+}
+const op = localStorage.getItem('mt_bg_opacity') || '60';
+const bl = localStorage.getItem('mt_bg_blur') || '0';
+document.getElementById('cfgBgOpacity').value = op;
+document.getElementById('cfgBgBlur').value = bl;
+document.getElementById('bgOpacityVal').textContent = op + '%';
+document.getElementById('bgBlurVal').textContent = bl + 'px';
+}
+
+function onBgOpacityChange(){
+const v = document.getElementById('cfgBgOpacity').value;
+document.getElementById('bgOpacityVal').textContent = v + '%';
+localStorage.setItem('mt_bg_opacity', v);
+applyBg();
+}
+
+function onBgBlurChange(){
+const v = document.getElementById('cfgBgBlur').value;
+document.getElementById('bgBlurVal').textContent = v + 'px';
+localStorage.setItem('mt_bg_blur', v);
+applyBg();
+}
+
+function handleBgImage(e){
+const file = e.target.files && e.target.files[0];
+e.target.value='';
+if(!file) return;
+if(!file.type || !file.type.startsWith('image/')){
+alert('请选择图片文件'); return;
+}
+const reader = new FileReader();
+reader.onload = ev => {
+const img = new Image();
+img.onload = () => {
+try{
+const MAX_W = 1080, MAX_H = 1920;
+let w = img.naturalWidth || img.width;
+let h = img.naturalHeight || img.height;
+const scale = Math.min(1, MAX_W / w, MAX_H / h);
+w = Math.max(1, Math.round(w * scale));
+h = Math.max(1, Math.round(h * scale));
+
+const canvas = document.createElement('canvas');
+canvas.width = w; canvas.height = h;
+const ctx = canvas.getContext('2d');
+ctx.fillStyle = '#000';
+ctx.fillRect(0, 0, w, h);
+ctx.drawImage(img, 0, 0, w, h);
+
+let quality = 0.85;
+let dataUrl = canvas.toDataURL('image/jpeg', quality);
+while(dataUrl.length > 1500000 && quality > 0.4){
+quality -= 0.1;
+dataUrl = canvas.toDataURL('image/jpeg', quality);
+}
+
+localStorage.setItem('mt_bg_image', dataUrl);
+applyBg();
+refreshBgPreview();
+alert(`背景已设置 ✅\n尺寸 ${w}×${h} · 约 ${Math.round(dataUrl.length*0.75/1024)} KB`);
+}catch(err){
+alert('图片处理失败：' + err.message);
+}
+};
+img.onerror = () => alert('图片读取失败，请换一张');
+img.src = ev.target.result;
+};
+reader.onerror = () => alert('文件读取失败');
+reader.readAsDataURL(file);
+}
+
+function resetBgImage(){
+if(!localStorage.getItem('mt_bg_image') && !localStorage.getItem('mt_bg_opacity')){
+alert('当前已是默认背景'); return;
+}
+if(!confirm('恢复默认纯色背景？')) return;
+localStorage.removeItem('mt_bg_image');
+localStorage.removeItem('mt_bg_opacity');
+localStorage.removeItem('mt_bg_blur');
+applyBg();
+refreshBgPreview();
+}
+
+// ===== Tab =====
+function switchTab(name, btn){
+document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+btn.classList.add('active');
+['chat','chars','worldbook','config'].forEach(t=>{
+document.getElementById(t==='chars'?'charsPanel':t==='worldbook'?'worldbookPanel':t==='config'?'configPanel':'chatPanel')
+.classList.toggle('active', t===name);
+});
+if(name==='chat') updateInjectInfo();
+if(name==='config') refreshBgPreview();
+}
+
+// ===== 角色管理 =====
+function renderCharGrid(){
+const kw=(document.getElementById('charSearch').value||'').toLowerCase();
+let list = characters.filter(c=>!kw||c.name.toLowerCase().includes(kw)||(c.persona||'').toLowerCase().includes(kw));
+list.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.createdAt||0)-(a.createdAt||0));
+const grid=document.getElementById('charGrid');
+grid.innerHTML=`<div class="char-card char-card-new" onclick="openCharEditor(null)">+ 新建角色</div>`+
+list.map(c=>`<div class="char-card ${c.id===currentCharId?'active':''}" onclick="setActiveChar('${c.id}')">
+${c.id===currentCharId?'<span class="badge-active">当前</span>':''}
+${c.pinned?'<span class="badge-pin">📌</span>':''}
+<div class="avatar">${c.avatar||'🎭'}</div><div class="name">${esc(c.name)}</div>
+<div class="desc">${esc(c.desc||'')}</div>
+<div class="char-actions">
+<button class="btn btn-primary btn-small" onclick="event.stopPropagation();setActiveChar('${c.id}')">使用</button>
+<button class="btn btn-secondary btn-small" onclick="event.stopPropagation();togglePin('${c.id}')">${c.pinned?'📌':'☆'}</button>
+<button class="btn btn-secondary btn-small" onclick="event.stopPropagation();openCharEditor('${c.id}')">✏️</button>
+</div></div>`).join('');
+}
+
+function setActiveChar(id){
+currentCharId=id; localStorage.setItem('mt_current_char',id);
+ensureChat(id);
+renderCharGrid(); renderCharInfoBar(); renderChat(); updateInjectInfo();
+}
+
+function togglePin(id){const c=getChar(id);if(c){c.pinned=!c.pinned;saveChars();renderCharGrid();}}
+
+function openCharEditor(id){
+editingCharId=id; isNewChar=!id;
+document.getElementById('charListView').style.display='none';
+document.getElementById('charEditView').style.display='block';
+if(isNewChar){
+['editAvatar','editName','editDesc','editPersona','editExamples','editFirstMsg','editSysPrompt','editPostHist']
+.forEach(i=>document.getElementById(i).value='');
+document.getElementById('editAvatar').value='🎭';
+}else{
+const c=getChar(id); if(!c) return;
+document.getElementById('editAvatar').value=c.avatar||'🎭';
+document.getElementById('editName').value=c.name||'';
+document.getElementById('editDesc').value=c.desc||'';
+document.getElementById('editPersona').value=c.persona||'';
+document.getElementById('editExamples').value=c.examples||'';
+document.getElementById('editFirstMsg').value=c.first_msg||'';
+document.getElementById('editSysPrompt').value=c.sys_prompt||'';
+document.getElementById('editPostHist').value=c.post_hist||'';
+}
+['editPersona','editExamples','editSysPrompt','editPostHist'].forEach(i=>{
+document.getElementById(i).oninput = updatePromptPreview;
+});
+updatePromptPreview();
+}
+
+function updatePromptPreview(){
+const p=document.getElementById('editPersona').value;
+const e=document.getElementById('editExamples').value;
+const s=document.getElementById('editSysPrompt').value;
+const ph=document.getElementById('editPostHist').value;
+let txt='';
+if(s) txt+=`[系统提示词]\n${s}\n\n`;
+if(p) txt+=`[角色设定]\n${p}\n\n`;
+if(e) txt+=`[示例对话]\n${e}\n\n`;
+if(ph) txt+=`[后置约束]\n${ph}`;
+document.getElementById('promptPreview').textContent=txt||'—';
+}
+
+function closeCharEditor(){
+document.getElementById('charEditView').style.display='none';
+document.getElementById('charListView').style.display='block';
+editingCharId=null; renderCharGrid();
+}
+
+function saveCurrentChar(){
+const name=document.getElementById('editName').value.trim();
+if(!name){alert('请填写角色名称');return;}
+const data={
+avatar:document.getElementById('editAvatar').value.trim()||'🎭',
+name, desc:document.getElementById('editDesc').value.trim(),
+persona:document.getElementById('editPersona').value.trim(),
+examples:document.getElementById('editExamples').value.trim(),
+first_msg:document.getElementById('editFirstMsg').value.trim(),
+sys_prompt:document.getElementById('editSysPrompt').value.trim(),
+post_hist:document.getElementById('editPostHist').value.trim()
+};
+if(isNewChar){
+const nc={id:uid(),...data,pinned:false,createdAt:Date.now(),builtin:false};
+characters.push(nc);
+currentCharId=nc.id;
+localStorage.setItem('mt_current_char',nc.id);
+chatHistory[currentCharId]=[];
+const c=getChar(currentCharId);
+if(c&&c.first_msg) chatHistory[currentCharId].push({role:'assistant',content:c.first_msg});
+}else{
+const c=getChar(editingCharId);
+if(!c){alert('角色不存在');return;}
+Object.assign(c,data);
+}
+saveChars();
+closeCharEditor(); renderCharInfoBar(); renderChat(); updateInjectInfo();
+}
+
+function deleteCurrentChar(){
+if(!editingCharId){ closeCharEditor(); return; }
+const c=getChar(editingCharId);
+if(!c){ closeCharEditor(); return; }
+if(c.builtin){alert('内置角色不能删除');return;}
+if(!confirm(`删除「${c.name}」？`)) return;
+characters=characters.filter(x=>x.id!==editingCharId);
+delete chatHistory[editingCharId];
+localStorage.removeItem(`mt_chat_${editingCharId}`);
+delete wbTurnCounter[editingCharId];
+localStorage.removeItem(`mt_wb_turn_${editingCharId}`);
+if(currentCharId===editingCharId){
+currentCharId=characters[0]?.id;
+if(currentCharId){
+localStorage.setItem('mt_current_char',currentCharId);
+ensureChat(currentCharId);
+}else{
+localStorage.removeItem('mt_current_char');
+}
+}
+saveChars(); closeCharEditor(); renderCharInfoBar(); renderChat(); updateInjectInfo();
+}
+
+function exportCurrentChar(){
+if(isNewChar){ alert('请先保存角色再导出'); return; }
+const id=editingCharId||currentCharId; const c=getChar(id); if(!c)return;
+const data={spec:'chara_card_v3',spec_version:'3.0',data:{name:c.name,description:c.desc,personality:c.persona,mes_example:c.examples,first_mes:c.first_msg,system_prompt:c.sys_prompt,post_history_instructions:c.post_hist}};
+downloadJSON(data,`${c.name}.json`);
+}
+function exportAllChars(){
+const data=characters.map(c=>({name:c.name,avatar:c.avatar,desc:c.desc,persona:c.persona,examples:c.examples,first_msg:c.first_msg,sys_prompt:c.sys_prompt,post_hist:c.post_hist}));
+downloadJSON(data,'mini-tavern-characters.json');
+}
+function importCharFiles(){document.getElementById('importFileInput').click();}
+function handleCharImport(e){
+const files=Array.from(e.target.files);
+e.target.value='';
+if(!files.length) return;
+Promise.all(files.map(f=>new Promise(resolve=>{
+const r=new FileReader();
+r.onload=ev=>{
+try{
+const d=JSON.parse(ev.target.result);
+const list=Array.isArray(d)?d:[d];
+list.forEach(raw=>{
+const item = raw && raw.data ? raw.data : raw;
+if(!item || !item.name) return;
+const nc={
+id:uid(),
+avatar:item.avatar||'🎭',
+name:item.name,
+desc:item.desc||item.description||'',
+persona:item.persona||item.personality||'',
+examples:item.examples||item.mes_example||'',
+first_msg:item.first_msg||item.first_mes||'',
+sys_prompt:item.sys_prompt||item.system_prompt||'',
+post_hist:item.post_hist||item.post_history_instructions||'',
+pinned:false, createdAt:Date.now(), builtin:false
+};
+characters.push(nc);
+ensureChat(nc.id);
+});
+resolve(true);
+}catch(err){
+alert(`导入失败: ${f.name}\n${err.message}`);
+resolve(false);
+}
+};
+r.readAsText(f);
+}))).then(()=>{
+saveChars(); renderCharGrid();
+if(!currentCharId && characters[0]){
+currentCharId=characters[0].id;
+localStorage.setItem('mt_current_char',currentCharId);
+ensureChat(currentCharId);
+renderCharInfoBar(); renderChat();
+}
+});
+}
+
+// ===== 世界书 =====
+function renderWBList(){
+const kw=(document.getElementById('wbSearch').value||'').toLowerCase();
+let list=worldbook.filter(e=>!kw||e.name.toLowerCase().includes(kw)||(e.content||'').toLowerCase().includes(kw));
+list.sort((a,b)=>(a.order||0)-(b.order||0));
+const budget=parseInt(document.getElementById('cfgWbBudet').value)||1500;
+let used=0;
+const html=list.map(e=>{
+used+=e.disabled?0:(e.content||'').length;
+const modeClass=e.mode==='always'?'wb-mode-always':e.mode==='keyword'?'wb-mode-keyword':'wb-mode-turn';
+const modeText=e.mode==='always'?'📌 常驻':e.mode==='keyword'?(e.keys||[]).slice(0,3).join(', '):`🔄 每${e.turnInterval||5}轮`;
+return`<div class="wb-entry"><div class="wb-head"><span class="wb-title">${esc(e.name)}</span><span class="wb-mode ${modeClass}">${e.disabled?'⛔ 禁用':modeText}</span></div><div class="wb-keys">${e.mode==='keyword'?(e.keys||[]).join(', '):e.mode==='always'?'每次请求注入':'每 '+ (e.turnInterval||5) +' 轮注入'}</div><div class="wb-content">${esc((e.content||'').slice(0,150))}${(e.content||'').length>150?'...':''}</div><div class="wb-actions"><button class="btn btn-secondary btn-small" onclick="openWBEditor('${e.id}')">✏️</button><button class="btn btn-danger btn-small" onclick="quickDeleteWB('${e.id}')">🗑</button></div></div>`;
+}).join('');
+document.getElementById('wbList').innerHTML=html||'<p style="color:var(--text-sub);font-size:0.8rem;">暂无条目，点击"新建条目"</p>';
+document.getElementById('wbBudget').textContent=`注入预算: ${used}/${budget} 字符${used>budget?' ⚠️ 超出':''}`;
+}
+
+function openWBEditor(id){
+editingWBId=id; isNewWB=!id;
+document.getElementById('wbListView').style.display='none';
+document.getElementById('wbEditView').style.display='block';
+if(isNewWB){
+document.getElementById('wbEditName').value='';
+document.getElementById('wbEditMode').value='keyword';
+document.getElementById('wbEditKeys').value='';
+document.getElementById('wbEditContent').value='';
+document.getElementById('wbEditPosition').value='0';
+document.getElementById('wbEditOrder').value='100';
+document.getElementById('wbEditTurn').value='5';
+document.getElementById('wbEditDisabled').checked=false;
+}else{
+const e=worldbook.find(w=>w.id===id); if(!e)return;
+document.getElementById('wbEditName').value=e.name;
+document.getElementById('wbEditMode').value=e.mode||'keyword';
+document.getElementById('wbEditKeys').value=(e.keys||[]).join(', ');
+document.getElementById('wbEditContent').value=e.content||'';
+document.getElementById('wbEditPosition').value=e.position||'0';
+document.getElementById('wbEditOrder').value=e.order||100;
+document.getElementById('wbEditTurn').value=e.turnInterval||5;
+document.getElementById('wbEditDisabled').checked=e.disabled||false;
+}
+onWBModeChange();
+}
+
+function onWBModeChange(){
+const m=document.getElementById('wbEditMode').value;
+document.getElementById('wbKeyGroup').style.display=m==='keyword'?'block':'none';
+document.getElementById('wbTurnGroup').style.display=m==='turn'?'block':'none';
+}
+
+function closeWBEditor(){
+document.getElementById('wbEditView').style.display='none';
+document.getElementById('wbListView').style.display='block';
+editingWBId=null; renderWBList();
+}
+
+function saveWBEntry(){
+const name=document.getElementById('wbEditName').value.trim();
+const content=document.getElementById('wbEditContent').value.trim();
+if(!name){alert('请填写条目名称');return;}
+const mode=document.getElementById('wbEditMode').value;
+const entry={
+id: isNewWB?uid():editingWBId,
+name, mode,
+keys: mode==='keyword'?document.getElementById('wbEditKeys').value.split(',').map(s=>s.trim()).filter(Boolean):[],
+content,
+position: parseInt(document.getElementById('wbEditPosition').value)||0,
+order: parseInt(document.getElementById('wbEditOrder').value)||100,
+turnInterval: parseInt(document.getElementById('wbEditTurn').value)||5,
+disabled: document.getElementById('wbEditDisabled').checked
+};
+if(isNewWB) worldbook.push(entry); else{ const i=worldbook.findIndex(w=>w.id===editingWBId); if(i>=0) worldbook[i]=entry; }
+saveWB(); closeWBEditor(); updateInjectInfo();
+}
+
+function quickDeleteWB(id){
+if(!confirm('删除此条目？'))return;
+worldbook=worldbook.filter(w=>w.id!==id); saveWB(); renderWBList(); updateInjectInfo();
+}
+function deleteWBEntry(){if(editingWBId){quickDeleteWB(editingWBId); closeWBEditor();}}
+
+function exportWB(){
+const data={name:'Mini Tavern Worldbook', entries:{}};
+worldbook.forEach((e,i)=>{data.entries[`entry_${i+1}`]={uid:i+1,key:e.keys,comment:e.name,content:e.content,constant:e.mode==='always',selective:e.mode==='keyword',position:e.position,order:e.order,disable:e.disabled||false};});
+downloadJSON(data,'mini-tavern-worldbook.json');
+}
+function importWBFile(){document.getElementById('wbImportInput').click();}
+function handleWBImport(e){
+const files=Array.from(e.target.files);
+e.target.value='';
+if(!files.length) return;
+Promise.all(files.map(f=>new Promise(resolve=>{
+const r=new FileReader();
+r.onload=ev=>{
+try{
+const d=JSON.parse(ev.target.result);
+if(d && d.entries){
+Object.values(d.entries).forEach(en=>{
+let keys=[];
+if(Array.isArray(en.key)) keys=en.key;
+else if(typeof en.key==='string') keys=en.key.split(',').map(s=>s.trim()).filter(Boolean);
+let pos = (en.position===1||en.position==='1'||en.position==='after_char') ? 1 : 0;
+worldbook.push({id:uid(),name:en.comment||'导入条目',mode:en.constant?'always':(en.selective?'keyword':'always'),keys,content:en.content||'',position:pos,order:en.order||100,turnInterval:5,disabled:en.disable||false});
+});
+}else if(Array.isArray(d)){
+d.forEach(en=>{
+worldbook.push({id:uid(),name:en.name||'导入',mode:en.mode||'keyword',keys:en.keys||[],content:en.content||'',position:en.position||0,order:en.order||100,turnInterval:en.turnInterval||5,disabled:en.disabled||false});
+});
+}
+resolve(true);
+}catch(err){
+alert(`导入失败: ${f.name}\n${err.message}`);
+resolve(false);
+}
+};
+r.readAsText(f);
+}))).then(()=>{
+saveWB(); renderWBList(); updateInjectInfo();
+});
+}
+
+// ===== 注入逻辑 =====
+function buildWorldbookInjection(userInput, advanceTurn=true){
+const budget=parseInt(localStorage.getItem('mt_wb_budget')||'1500');
+const charId=currentCharId;
+let turnCount=0;
+if(charId){
+turnCount=wbTurnCounter[charId]||0;
+if(advanceTurn){
+turnCount++;
+wbTurnCounter[charId]=turnCount;
+localStorage.setItem(`mt_wb_turn_${charId}`, String(turnCount));
+}
+}
+
+let injected=[];
+let used=0;
+const sorted=[...worldbook].filter(e=>!e.disabled).sort((a,b)=>(a.order||0)-(b.order||0));
+
+for(const e of sorted){
+if(used>=budget) break;
+let shouldInject=false;
+if(e.mode==='always') shouldInject=true;
+else if(e.mode==='keyword'){
+const keys=e.keys||[];
+shouldInject=keys.some(k=>(userInput||'').toLowerCase().includes(k.toLowerCase()));
+}else if(e.mode==='turn'){
+const interval=e.turnInterval||5;
+shouldInject=(turnCount>0 && turnCount%interval===0);
+}
+if(shouldInject){
+const text=`[${e.name}]\n${e.content}`;
+if(used+text.length<=budget){
+injected.push({name:e.name, content:e.content, position:e.position});
+used+=text.length;
+}
+}
+}
+return {injected, used};
+}
+
+function updateInjectInfo(){
+const info=document.getElementById('injectInfo');
+if(!currentCharId){info.style.display='none';return;}
+const {injected}=buildWorldbookInjection('', false);
+if(injected.length===0){info.style.display='none';return;}
+info.style.display='block';
+info.textContent=`📖 世界书已就绪: ${injected.map(i=>i.name).join(' · ')} (聊天时自动注入)`;
+}
+
+// ===== 聊天 =====
+function renderCharInfoBar(){
+const bar=document.getElementById('charInfoBar'); const c=getChar(currentCharId);
+if(!c){bar.innerHTML=''; document.getElementById('currentCharBadge').textContent=''; return;}
+bar.innerHTML=`<div class="char-info"><div class="avatar">${c.avatar||'🎭'}</div><div class="meta"><h3>${esc(c.name)}</h3><p>${esc(c.desc||'')}</p></div><button class="btn btn-secondary btn-small" onclick="switchTab('chars',document.querySelectorAll('.tab-btn')[1])">🎭</button></div>`;
+document.getElementById('currentCharBadge').textContent=c.name;
+}
+
+function renderChat(){
+const box=document.getElementById('chatMessages');
+const msgs=chatHistory[currentCharId]||[];
+box.innerHTML=msgs.map(m=>`<div class="msg ${m.role==='user'?'msg-user':'msg-bot'}">${esc(m.content)}</div>`).join('');
+box.scrollTop=box.scrollHeight;
+}
+
+async function sendMessage(){
+const input=document.getElementById('chatInput');
+const text=input.value.trim();
+if(!text||isGenerating)return;
+
+const charIdAtStart = currentCharId;
+const char = getChar(charIdAtStart);
+if(!char){ alert('当前角色不存在，请重新选择'); return; }
+if(!chatHistory[charIdAtStart]) ensureChat(charIdAtStart);
+
+const key=localStorage.getItem('mt_api_key');
+const base=localStorage.getItem('mt_base_url')||'https://api.deepseek.com/v1';
+const model=localStorage.getItem('mt_model')||'deepseek-chat';
+const temp=parseFloat(localStorage.getItem('mt_temp')||'0.8');
+const maxT=parseInt(localStorage.getItem('mt_max_tokens')||'2048');
+if(!key){alert('请先配置 API Key');switchTab('config',document.querySelectorAll('.tab-btn')[3]);return;}
+
+chatHistory[charIdAtStart].push({role:'user',content:text});
+input.value=''; renderChat();
+
+const {injected}=buildWorldbookInjection(text);
+
+let messages=[];
+
+let systemText='';
+if(char.sys_prompt) systemText+=char.sys_prompt+'\n\n';
+if(char.persona) systemText+=`你是${char.name}。${char.persona}\n\n`;
+if(char.examples) systemText+=`对话示例：\n${char.examples}\n\n`;
+
+const sysWB=injected.filter(i=>i.position===0);
+if(sysWB.length>0){
+systemText+='— 世界书注入 —\n';
+sysWB.forEach(i=>{systemText+=`[${i.name}]\n${i.content}\n\n`;});
+}
+if(systemText) messages.push({role:'system',content:systemText.trim()});
+
+const history=chatHistory[charIdAtStart].slice(-20);
+const histWB=injected.filter(i=>i.position===1);
+if(histWB.length>0){
+const lastUserIdx=history.map((m,i)=>m.role==='user'?i:-1).filter(i=>i>=0).pop();
+if(lastUserIdx!==undefined){
+const injectText=histWB.map(i=>i.content).join('\n\n');
+history.splice(lastUserIdx,0,{role:'system',content:'— 世界书注入 —\n'+injectText});
+}
+}
+messages=messages.concat(history);
+
+if(char.post_hist) messages.push({role:'user',content:`[系统指令: ${char.post_hist}]`});
+
+isGenerating=true; abortController=new AbortController();
+document.getElementById('sendBtn').disabled=true;
+document.getElementById('stopBtn').style.display='inline-flex';
+document.getElementById('chatInput').disabled=true;
+
+const box=document.getElementById('chatMessages');
+const botDiv=document.createElement('div');
+botDiv.className='msg msg-bot typing';
+box.appendChild(botDiv); box.scrollTop=box.scrollHeight;
+let fullReply='';
+
+try{
+const res=await fetch(`${base}/chat/completions`,{
+method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+body:JSON.stringify({model,messages,stream:true,temperature:temp,max_tokens:maxT}),
+signal:abortController.signal
+});
+if(!res.ok){const t=await res.text();throw new Error(`HTTP ${res.status}: ${t.slice(0,80)}`);}
+const reader=res.body.getReader(); const decoder=new TextDecoder(); let buffer='';
+while(true){
+const{done,value}=await reader.read(); if(done)break;
+buffer+=decoder.decode(value,{stream:true});
+const lines=buffer.split('\n'); buffer=lines.pop()||'';
+for(const line of lines){
+const trimmed=line.trim();
+if(!trimmed||trimmed==='data: [DONE]')continue;
+if(trimmed.startsWith('data: ')){try{const json=JSON.parse(trimmed.slice(6));const delta=json.choices?.[0]?.delta?.content;if(delta){fullReply+=delta;botDiv.textContent=fullReply;box.scrollTop=box.scrollHeight;}}catch(e){}}
+}
+}
+}catch(err){
+botDiv.textContent=err.name==='AbortError'?fullReply+'\n\n[已停止]':`❌ ${err.message}`;
+botDiv.style.color='var(--danger)';
+}finally{
+botDiv.classList.remove('typing');
+if(fullReply) chatHistory[charIdAtStart].push({role:'assistant',content:fullReply});
+localStorage.setItem(`mt_chat_${charIdAtStart}`,JSON.stringify(chatHistory[charIdAtStart]));
+isGenerating=false; abortController=null;
+document.getElementById('sendBtn').disabled=false;
+document.getElementById('stopBtn').style.display='none';
+document.getElementById('chatInput').disabled=false;
+document.getElementById('chatInput').focus();
+if(currentCharId === charIdAtStart) renderChat();
+}
+}
+
+function stopGenerate(){if(abortController)abortController.abort();}
+function clearChat(){
+if(!currentCharId){ alert('请先选择角色'); return; }
+if(!confirm('清空对话？'))return;
+chatHistory[currentCharId]=[];
+const c=getChar(currentCharId);
+if(c&&c.first_msg) chatHistory[currentCharId].push({role:'assistant',content:c.first_msg});
+localStorage.removeItem(`mt_chat_${currentCharId}`);
+wbTurnCounter[currentCharId]=0;
+localStorage.removeItem(`mt_wb_turn_${currentCharId}`);
+renderChat();
+}
+
+// ✅ 修复：中文/日文等 IME 组合输入中按 Enter 是在选词，不能触发发送
+function handleChatKeydown(e){
+if(e.isComposing || e.keyCode === 229) return;
+if(e.key==='Enter' && !e.shiftKey){
+e.preventDefault();
+sendMessage();
+}
+}
+
+function downloadJSON(data,filename){
+const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+const url=URL.createObjectURL(blob); const a=document.createElement('a');
+a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
